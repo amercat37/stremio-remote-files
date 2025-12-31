@@ -58,7 +58,7 @@ def stream_movie(imdb_id: str, request: Request):
         return {"streams": []}
 
     base_url = MEDIA_BASE_URL_EXTERNAL if external else MEDIA_BASE_URL_INTERNAL
-    provider_name = "Remote Files (External)" if external else "Remote Files (LAN)"
+    provider_name = "Remote Files (External)" if external else "Remote Files (Internal)"
 
     with sqlite3.connect(DB_PATH) as conn:
         rows = conn.execute(
@@ -115,7 +115,7 @@ def stream_episode(episode_id: str, request: Request):
         return {"streams": []}
 
     base_url = MEDIA_BASE_URL_EXTERNAL if external else MEDIA_BASE_URL_INTERNAL
-    provider_name = "Remote Files (External)" if external else "Remote Files (LAN)"
+    provider_name = "Remote Files (External)" if external else "Remote Files (Internal)"
 
     with sqlite3.connect(DB_PATH) as conn:
         rows = conn.execute(
@@ -161,7 +161,7 @@ def manifest_internal():
     return {
         "id": "org.remote-files.internal",
         "name": "Remote Files (Internal)",
-        "version": "1.1.1",
+        "version": "1.1.2",
         "description": "Browse and play your own media over LAN or VPN",
         "behaviorHints": {
             "configurable": True,
@@ -197,8 +197,8 @@ def manifest_external():
     return {
         "id": "org.remote-files.external",
         "name": "Remote Files (External)",
-        "version": "1.1.1",
-        "description": "Browse and play your own media securely over HTTPS",
+        "version": "1.1.2",
+        "description": "Browse and play your own media over the internet using HTTPS",
         "behaviorHints": {
             "configurable": True,
             "configurationRequired": False,
