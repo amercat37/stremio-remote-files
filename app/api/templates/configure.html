@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Remote Files – Install</title>
+    <meta charset="utf-8">
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f5f7fa;
+            margin: 0;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: auto;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        h1 {
+            margin-top: 0;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            margin-top: 6px;
+            margin-bottom: 16px;
+            box-sizing: border-box;
+        }
+
+        textarea {
+            width: 100%;
+            box-sizing: border-box;
+            font-family: monospace;
+            padding: 10px;
+        }
+
+        button {
+            padding: 8px 14px;
+            font-weight: 600;
+            border-radius: 4px;
+            border: none;
+            background: #2563eb;
+            color: white;
+            cursor: pointer;
+        }
+
+        .note {
+            color: #475569;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Install Remote Files Addon</h1>
+
+    <p class="note">This page generates a Stremio addon install link.</p>
+
+    <label>Addon Base URL</label>
+    <input id="base">
+
+    <div id="token-block" style="display:none">
+        <label>Stream Token</label>
+        <input id="token" type="password">
+    </div>
+
+    <button type="button" onclick="install()">Install Addon</button>
+
+    <h3>Manifest URL</h3>
+    <textarea id="manifest" rows="3" readonly></textarea>
+</div>
+
+<script>
+const isHttps = window.location.protocol === "https:";
+const mode = isHttps ? "external" : "internal";
+
+const baseInput = document.getElementById("base");
+baseInput.value = window.location.origin;
+
+if (isHttps) {
+    document.getElementById("token-block").style.display = "block";
+}
+
+function install() {
+    let base = baseInput.value.trim();
+
+    if (!base.startsWith("http://") && !base.startsWith("https://")) {
+        alert("Base URL must start with http:// or https://");
+        return;
+    }
+
+    base = base.replace(/\/$/, "");
+
+    let manifestUrl = `${base}/${mode}/manifest.json`;
+
+    if (isHttps) {
+        const token = document.getElementById("token").value.trim();
+        if (!token) {
+            alert("Token is required for external access");
+            return;
+        }
+        manifestUrl += `?token=${encodeURIComponent(token)}`;
+    }
+
+    document.getElementById("manifest").value = manifestUrl;
+    window.location.href = `stremio://${manifestUrl}`;
+}
+</script>
+</body>
+</html>
