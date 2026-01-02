@@ -42,7 +42,7 @@ There are **two services**:
   - stream resolvers
   - addon configuration (`/internal/configure`, `/external/configure`)
 - Exposes **admin endpoints and UI**:
-  - `/admin`
+  - `/admin` (human-facing rescans)
   - `/configure` (human-facing install / configuration page)
   - scan endpoints (manual rescans)
 

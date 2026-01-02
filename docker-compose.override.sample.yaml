@@ -1,0 +1,24 @@
+version: "3.8"
+
+services:
+  # ------------------------------------------------------------
+  # Reverse proxy + static media server (Caddy)
+  # ------------------------------------------------------------
+  stremio-remote-files-proxy:
+    ports:
+      - "11080:80"
+      - "11443:443"
+
+    volumes:
+      # Replace with paths on YOUR machine
+      - /path/to/media:/media:ro
+      - /path/to/project/volumes/stremio-remote-files-proxy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - /path/to/project/volumes/stremio-remote-files-proxy/certs:/certs:ro
+
+  # ------------------------------------------------------------
+  # Stremio Remote Files API / Addon (FastAPI)
+  # ------------------------------------------------------------
+  stremio-remote-files-api:
+    volumes:
+      - /path/to/project/volumes/stremio-remote-files-api/data:/data
+      - /path/to/media:/media:ro
