@@ -7,7 +7,7 @@
     log {
         output stdout
         format console
-        level DEBUG
+        level INFO
     }
 }
 
