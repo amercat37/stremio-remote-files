@@ -30,9 +30,18 @@ def valid_stream_token(request: Request) -> bool:
     External stream endpoints do not raise errors on auth failure; they return
     empty results instead to satisfy Stremio addon expectations.
     """
-    token = request.query_params.get("token")
-    return token in STREAM_TOKENS
+    # 1. Authorization: Bearer <token>
+    auth = request.headers.get("authorization")
+    if auth and auth.lower().startswith("bearer "):
+        token = auth[7:].strip()
+        return token in STREAM_TOKENS
 
+    # 2. ?token=<token> (used by stream resolvers)
+    token = request.query_params.get("token")
+    if token:
+        return token in STREAM_TOKENS
+
+    return False
 
 def require_admin_token(request: Request):
     """

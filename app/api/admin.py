@@ -75,7 +75,6 @@ def admin_scan_rebuild(request: Request):
 #
 # Access control for streaming is enforced via tokenized stream endpoints
 # and proxy-level checks, not via the configure page itself.
-@router.get("/configure", response_class=HTMLResponse)
 @router.get("/internal/configure", response_class=HTMLResponse)
 @router.get("/external/configure", response_class=HTMLResponse)
 def configure_page(request: Request):

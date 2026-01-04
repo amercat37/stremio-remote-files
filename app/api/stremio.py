@@ -34,16 +34,29 @@ router = APIRouter()
 
 @router.get("/internal/catalog/movie/remote-files.json")
 @router.get("/external/catalog/movie/remote-files.json")
-def catalog_movies():
+def catalog_movies(request: Request):
+    external = is_external(request)
+
+    # External requests fail closed with empty catalog
+    if external and not valid_stream_token(request):
+        return {"metas": []}
+
     with sqlite3.connect(DB_PATH) as conn:
         return {"metas": get_movie_catalog(conn)}
 
 
 @router.get("/internal/catalog/series/remote-files.json")
 @router.get("/external/catalog/series/remote-files.json")
-def catalog_series():
+def catalog_series(request: Request):
+    external = is_external(request)
+
+    # External requests fail closed with empty catalog
+    if external and not valid_stream_token(request):
+        return {"metas": []}
+
     with sqlite3.connect(DB_PATH) as conn:
         return {"metas": get_series_catalog(conn)}
+
 
 
 # ------------------------------------------------------------

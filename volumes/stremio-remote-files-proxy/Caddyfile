@@ -1,61 +1,85 @@
-# ============================================================
-# Stremio Remote Files – Reverse Proxy
-#
-# Design notes:
-# - :80 is intended for LAN / VPN use (trusted network)
-# - :443 is intended for external access (HTTPS)
-# - API/UI endpoints are always proxied to the FastAPI service
-# - Media is served directly by Caddy
-# ============================================================
-
-
 {
+    # Disable Caddy’s automatic HTTP → HTTPS redirect listener on :80
+    # This deployment is HTTPS-only
+    auto_https disable_redirects
+
+    # Global logging configuration
     log {
         output stdout
         format console
-        level INFO
+        level DEBUG
     }
 }
 
-
-# ============================================================
-# Internal (LAN / VPN)
-# ============================================================
-:80 {
-
-  route {
-    # FastAPI UI + API endpoints
-    # Internal access does NOT require tokens
-    reverse_proxy /admin*    stremio-remote-files-api:7000
-    reverse_proxy /configure*  stremio-remote-files-api:7000
-    reverse_proxy /internal* stremio-remote-files-api:7000
-    reverse_proxy /external* stremio-remote-files-api:7000
-
-    # Media files (trusted network, no token required)
-    root * /media
-    file_server
-  }
-}
-
-
-# ============================================================
-# External (HTTPS)
-# ============================================================
 :443 {
-  # Static certificates mounted from volume
-  tls /certs/fullchain.pem /certs/privkey.pem
+    # Static TLS certificates mounted from the container volume
+    tls /certs/fullchain.pem /certs/privkey.pem
 
-  route {
-    # FastAPI UI + API endpoints
-    # Authentication is enforced by the application itself
-    reverse_proxy /admin*    stremio-remote-files-api:7000
-    reverse_proxy /configure*  stremio-remote-files-api:7000
-    reverse_proxy /internal* stremio-remote-files-api:7000
-    reverse_proxy /external* stremio-remote-files-api:7000
-  }
+    # ------------------------------------------------------------
+    # API, UI, and Manifest Routes
+    # These endpoints are always proxied to the FastAPI backend.
+    # Authentication and authorization are handled by the application.
+    # ------------------------------------------------------------
 
-  route {
-    root * /media
-    file_server
-  }
+    handle /admin* {
+        # Admin UI and management endpoints
+        reverse_proxy stremio-remote-files-api:7000
+    }
+
+    handle /internal* {
+        # Internal Stremio addon endpoints
+        # (catalogs, streams, manifests)
+        reverse_proxy stremio-remote-files-api:7000
+    }
+
+    handle /external* {
+        # External Stremio addon endpoints
+        # Token validation for streams and catalogs happens in FastAPI
+        reverse_proxy stremio-remote-files-api:7000
+    }
+
+    # ------------------------------------------------------------
+    # Combined Media Protection Logic
+    # Applies to both movies and series media files.
+    # ------------------------------------------------------------
+
+    @media_paths {
+        # Public URL paths for static media files
+        path /movies/* /series/*
+    }
+
+    handle @media_paths {
+        # Matcher for trusted internal networks (from .env)
+        @internal {
+            remote_ip {$TRUSTED_NETWORKS}
+        }
+
+        # --------------------------------------------------------
+        # Internal (LAN / VPN) access
+        # No token required; files are served directly.
+        # --------------------------------------------------------
+        handle @internal {
+            root * /media
+            file_server
+        }
+
+        # --------------------------------------------------------
+        # External access
+        # Requests are forwarded to FastAPI /auth for token validation.
+        # Media is served only if /auth returns a successful response.
+        # --------------------------------------------------------
+        handle {
+            forward_auth stremio-remote-files-api:7000 {
+                uri /auth
+                # Forward the original requested URL so FastAPI
+                # knows exactly which media file is being accessed
+                header_up Authorization {http.request.header.Authorization}
+                copy_headers X-Original-URL
+            }
+
+            # Serve media files after successful authentication
+            root * /media
+            file_server
+        }
+    }
 }

@@ -9,9 +9,12 @@ services:
     container_name: stremio-remote-files-proxy
     restart: unless-stopped
 
+    # Runtime configuration (not committed; see .env.sample)
+    env_file:
+      - .env
+
     ports:
-      - "11080:80"     # HTTP (internal LAN / VPN)
-      - "11443:443"    # HTTPS (external)
+      - "11443:443"
 
     volumes:
       # Shared media storage (read-only)
