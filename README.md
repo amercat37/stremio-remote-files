@@ -2,8 +2,8 @@
 
 Self-hosted Stremio addon that indexes a **remote movie and series library** and serves streams over:
 
-- **Internal access (HTTP)** for trusted networks (LAN/VPN)
-- **External access (HTTPS)** with token-based protection for stream discovery and resolution over the internet
+- Internal trusted networks (LAN/VPN)
+- External untrusted networks with token-based protection for catalogs, streams, and media delivery (via reverse proxy)
 
 Stremio includes a “Local Files” addon for playing files stored on a PC.  
 However, platforms like **Fire TV sticks, Android TV, and other embedded devices** have no local storage and no way to access local files.
@@ -23,7 +23,7 @@ Before you begin, you will need:
 - A **TMDB API key** (free)
   - Create one at: https://www.themoviedb.org/settings/api
   - Used to retrieve movie and series metadata (IMDb ID, posters, genres)
-- (Optional) A domain name and TLS certificates for external HTTPS access
+- A TLS certificate (Stremio addons require valid, non-self-signed, certificates)
 
 No Python installation is required on the host system.
 
@@ -40,19 +40,18 @@ There are **two services**:
   - manifests
   - catalogs
   - stream resolvers
-  - addon configuration (`/internal/configure`, `/external/configure`)
 - Exposes **admin endpoints and UI**:
   - `/admin` (human-facing rescans)
-  - `/configure` (human-facing install / configuration page)
+  - `/internal/configure`, `/external/configure` (human-facing install / configuration page)
   - scan endpoints (manual rescans)
 
 ### 2) `stremio-remote-files-proxy` (Caddy)
 
-- Reverse proxies API and admin HTTP routes to the API container
-- Serves the **actual media bytes** directly from `/media`
-- Terminates HTTPS for all external access
-- Does **not** enforce token checks on media byte delivery
-- Token enforcement is handled at the **stream resolver API layer**
+- Reverse proxies API and admin routes to the API container
+- Serves the **actual media bytes** directly from disk
+- Enforces token validation for **external media requests** at the proxy layer
+- Trusted internal networks (LAN/VPN) bypass token checks
+- Token validation is delegated to the FastAPI `/auth` endpoint
 
 ---
 
@@ -110,33 +109,28 @@ Create `.env` from `.env.sample`.
 STREAM_TOKENS=change-me
 ADMIN_SCAN_TOKEN=change-me
 TMDB_API_KEY=change-me
-MEDIA_BASE_URL_INTERNAL=http://internal.ip.address:11080
+MEDIA_BASE_URL_INTERNAL=https://internal.ip.address:11443
 MEDIA_BASE_URL_EXTERNAL=https://external.host.name:11443
+TRUSTED_NETWORKS=192.168.0.0/16 10.0.0.0/8 172.16.0.0/12
 ```
 
 ### Variable reference
 
 | Variable | Required | Description |
 |---|---:|---|
-| `STREAM_TOKENS` | Yes | Comma-separated list of tokens used by external Stremio stream resolvers |
+| `STREAM_TOKENS` | Yes | **Comma-separated** list of tokens used by external Stremio stream resolvers |
 | `ADMIN_SCAN_TOKEN` | Yes | Token required for admin scan and rebuild endpoints |
 | `TMDB_API_KEY` | Yes | Used for metadata lookups (IMDb ID, posters, genres) |
 | `MEDIA_BASE_URL_INTERNAL` | Yes | Base IP/URL used for Internal (LAN/VPN) streams |
-| `MEDIA_BASE_URL_EXTERNAL` | Yes | Base IP/URL used for external HTTPS streams over the internet|
+| `MEDIA_BASE_URL_EXTERNAL` | Yes | Base IP/URL used for external streams over the internet (enforces token protection)|
+| `TRUSTED_NETWORKS` | Yes | **Space-separated** CIDR ranges treated as trusted internal networks (LAN/VPN)|
 
-### Tokens (single or multiple)
-
-You may specify one or more tokens:
-
-```
-STREAM_TOKENS=token1,token2,token3
-```
+### Tokens
 
 Two separate token types are used:
 
 - **Stream tokens**
-  - Used by external Stremio stream resolver endpoints
-  - Passed as `?token=` query parameters
+  - Used by external Stremio stream resolver endpoints and direct external media requests
   - Invalid tokens return an empty stream list (no errors)
 
 - **Admin token**
@@ -148,7 +142,11 @@ Stream tokens **cannot** be used for admin actions, and admin tokens are never a
 
 Tokens are **not required**, including for external access, for:
 - Manifests
+
+Tokens **are required** for external access to:
 - Catalog endpoints
+- Stream resolver endpoints
+- Media Requests
 
 ---
 
@@ -190,28 +188,18 @@ cp .env.sample .env
 # edit values
 ```
 
-### 3) Add TLS certificates (external HTTPS only)
+### 3) Add TLS certificates
 
-TLS certificates are only required if you want external HTTPS access.
+TLS certificates are required for internal and external access.
 
 ```
 ./volumes/stremio-remote-files-proxy/certs/fullchain.pem
 ./volumes/stremio-remote-files-proxy/certs/privkey.pem
 ```
-If you do not require external HTTPS access to your media, you may comment out or remove the entire "External (HTTPS)" section in the Caddyfile:
-```
-./volumes/stremio-remote-files-proxy/Caddyfile
-```
-
-This disables all external internet access while keeping internal (LAN/VPN) access intact.
 
 ### 4) Ports, DNS, firewall
 
-Defaults:
-- Internal HTTP: `11080`
-- External HTTPS: `11443`
-
-If you change ports:
+Change the base URLs for internal and external access in the ```.env``` file:
 - Update `MEDIA_BASE_URL_INTERNAL` and `MEDIA_BASE_URL_EXTERNAL`  
 
 If you do expose this plugin externally:
@@ -227,8 +215,8 @@ docker compose up -d --build
 ### 6) Configure addon for Stremio
 
 Open in a browser:
-- Internal: http://<internal.ip.address>:11080/configure — Configure the addon for internal HTTP (LAN/VPN)
-- External: https://<external.host.name>:11443/configure — Configure the addon for external HTTPS with token authentication
+- Internal: https://<internal.ip.address>:11443/internal/configure — Configure the addon for internal (LAN/VPN) access
+- External: https://<external.host.name>:11443/external/configure — Configure the addon for external access with token authentication
 
 A configuration web page will be displayed.  
 
@@ -238,7 +226,7 @@ Fill in the required fields:
 - **Addon Base URL**  
 Defaults to the URL used to access the configure page.
 - **Stream Token**  
-Only visible when accessing the page via HTTPS.
+Only visible when accessing the "external" configuration page.
 Use any token defined in `STREAM_TOKENS` in the `.env` file.
 
 Click **Install Addon**:
@@ -248,6 +236,10 @@ Click **Install Addon**:
 In Stremio:
 - Discover → Movies → **Remote Files** → `Movie Name` → Remote Files (Internal) - Play
 - Discover → Series → **Remote Files** → `Series Name` → `Season` → `Episode` → Remote Files (Internal) - Play
+
+or
+
+Search for any movie or series and look at the list of streams on the right hand side.  Click the down addow next to "All" at the top of the streams list.  Choose "Remote Files (Internal)" or "Remote Files (External)".
 
 ### Note on duplicate catalogs
 
@@ -277,7 +269,7 @@ On API startup:
 ### Manual scan (Admin UI)
 
 Admin page:
-- `http://<internal.ip.address>:11080/admin`
+- `https://<internal.ip.address>:11443/admin`
 - `https://<external.host.name>:11443/admin`
 
 Admin actions (token required):
@@ -313,25 +305,25 @@ PY
 You can trigger a rescan using the admin endpoints directly from the host
 or any trusted LAN/VPN client.
 
-#### Internal (HTTP – LAN/VPN)
+#### Internal
 ```bash
-curl -X POST http://internal.ip.address:11080/admin/scan \
+curl -X POST https://internal.ip.address:11443/admin/scan \
   -H "Authorization: Bearer ADMIN_SCAN_TOKEN"
 ```
 
-#### External (HTTPS - internet)
+#### External
 ```bash
 curl -k -X POST https://external.host.name:11443/admin/scan \
   -H "Authorization: Bearer ADMIN_SCAN_TOKEN"
 ```
 
-#### Full rebuild (HTTP)
+#### Full rebuild (Internal)
 ```bash
-curl -X POST http://internal.ip.address:11080/admin/scan/rebuild \
+curl -X POST https://internal.ip.address:11443/admin/scan/rebuild \
   -H "Authorization: Bearer ADMIN_SCAN_TOKEN"
 ```
 
-#### Full rebuild (HTTPS)
+#### Full rebuild (External)
 ```bash
 curl -k -X POST https://external.host.name:11443/admin/scan/rebuild \
   -H "Authorization: Bearer ADMIN_SCAN_TOKEN"
@@ -351,7 +343,6 @@ curl -k -X POST https://external.host.name:11443/admin/scan/rebuild \
 ### Admin pages (public)
 
 - `GET /admin`
-- `GET /configure`
 
 ### Admin actions (token required)
 
@@ -363,14 +354,14 @@ curl -k -X POST https://external.host.name:11443/admin/scan/rebuild \
 ### Stremio addon endpoints
 
 **Important:**  
-External manifests and catalogs do **not** require tokens.  
-Only **external stream resolvers** enforce token validation.
+External manifests do **not** require tokens.  
+External catalog and stream resolver endpoints **require token validation**.
 
 #### Manifests
 - `GET /internal/manifest.json`
 - `GET /external/manifest.json`
 
-#### Catalogs
+#### Catalogs (token required for external only)
 - `GET /internal/catalog/movie/remote-movies.json`
 - `GET /external/catalog/movie/remote-movies.json`
 - `GET /internal/catalog/series/remote-series.json`
@@ -396,26 +387,32 @@ Unauthorized external stream requests return an **empty stream list**, matching 
 
 ## Proxy behavior and tests
 
-### Internal (HTTP)
+### Internal
 
-- Proxies API and admin routes
+- Proxies API and admin routes without token checks
+- Terminates TLS
 - Serves media bytes without token checks
 
 Test:
 ```bash
-curl -I http://internal.ip.address:11080/movies/Night%20of%20the%20Living%20Dead%20(1968).mp4
+curl -I https://internal.ip.address:11443/movies/Night%20of%20the%20Living%20Dead%20(1968).mp4
 ```
 
-### External (HTTPS)
+### External
 
-- Proxies API and admin routes over HTTPS
-- Terminates TLS for all external requests
-- Does **not** enforce token checks on media bytes
-- Token validation occurs only in external stream resolver endpoints
+- Proxies API and admin routes with token checks
+- Terminates TLS
+- Catalog and stream discovery are protected at the API layer using token authentication
+- Media byte delivery is protected by the reverse proxy for external access using token authentication
+- External media requests are authenticated via FastAPI `/auth`
+- This ensures reliable playback while preventing unauthenticated external access
+
 
 Tests:
 ```bash
-curl -k -I http://external.ip.address:11443/movies/Night%20of%20the%20Living%20Dead%20(1968).mp4
+curl -k -I \
+  -H "Authorization: Bearer DUMMY_TOKEN" \
+  "https://external.host.name:11443/movies/Night%20of%20the%20Living%20Dead%20(1968).mp4"
 ```
 
 ---
@@ -424,8 +421,12 @@ curl -k -I http://external.ip.address:11443/movies/Night%20of%20the%20Living%20D
 
 **Catalog is empty**
 - Check media mount paths
-- Verify naming rules
+- Verify naming rules:
+  - Movies must be named `Title (YEAR).ext` (optional `[resolution]`)
+  - Series must follow `Series Name/Season XX/SxxExx - Title.ext`
+  - Incorrect filenames or season folder names are skipped during scanning
 - Run `/admin/scan`
+
 
 **External streams are empty**
 - Confirm `?token=` is provided
@@ -465,59 +466,6 @@ Possible future improvements:
 - Hide empty seasons
 - Only expose seasons with files
 - Add scan summaries indicating partial availability
-
-### Token authentication for HTTPS media streams
-
-At present, token authentication is enforced **only at the stream resolver layer** (`/external/stream/*`) and **not at the media byte delivery layer** when serving files over HTTPS.
-
-This is a deliberate design choice.
-
-During testing with Stremio Desktop and other native clients, it was observed that:
-
-- Media playback involves **multiple HTTP range requests**
-- Follow-up range requests may:
-  - omit query parameters
-  - retry without the original token
-  - be issued in parallel or out of order
-- Enforcing a token at the proxy level for HTTPS media responses causes some of these requests to receive `401 Unauthorized`
-- This results in **silent playback failures or stalled streams**, even when the initial request succeeds
-
-Because of this behavior, **proxy-level token enforcement on HTTPS media streams is currently incompatible with reliable Stremio playback**.
-
-#### Current behavior
-
-- **External stream resolvers** (`/external/stream/*`)
-  - Served over HTTPS
-  - Require a valid token
-  - Control which media URLs are disclosed to clients
-
-- **Media delivery**
-  - Served directly by the proxy
-  - No token enforcement at the byte level
-  - Required for stable playback across clients
-
-This mirrors the approach taken by widely-used Stremio addons (e.g. Torrentio), which secure **stream discovery and resolution** rather than the media bytes themselves.
-
-#### Possible future improvements
-
-If stricter protection of HTTPS media streams becomes necessary, future versions may explore:
-
-- **API-level media proxying**  
-  Stream media bytes through the application layer, allowing token validation per request and full control over range handling.
-
-- **Short-lived or signed URLs**  
-  Generate time-limited media URLs that remain compatible with range requests.
-
-- **IP-based access controls**  
-  Restrict external media access to known client IP ranges.
-
-- **Obfuscated media paths**  
-  Reduce accidental discovery by using non-guessable URL paths.
-
-For now, the project prioritizes **playback reliability and simplicity** over byte-level authentication, while continuing to enforce tokens for:
-- external stream resolution
-- administrative actions
-- addon configuration
 
 ---
 
@@ -628,12 +576,14 @@ target-version = "py312"
 - Admin and configure pages are intentionally public
 - The configure page itself does not grant access to media
 - Admin API actions (`/admin/scan`, `/admin/scan/rebuild`) require a Bearer token
-- External stream resolvers enforce token checks
-- Catalogs and manifests are intentionally unauthenticated
+- Manifests are intentionally unauthenticated
+- External catalog and stream resolver endpoints enforce token checks
 - All external access is served over HTTPS
-- Token authentication is enforced only for external stream resolver endpoints
-- Media byte delivery is intentionally unauthenticated to ensure reliable playback
+- Token authentication at the API layer is enforced only for external catalog and stream resolver endpoints
 - Stream tokens and admin tokens are intentionally separate to reduce blast radius
+- Trusted internal networks bypass token checks
+- External media requests are authenticated via the FastAPI `/auth` endpoint
+- Stream discovery and resolution are still token-protected at the API layer
 
 This design follows the same security model used by common Stremio addons, which protect stream discovery and resolution rather than media byte delivery.
 

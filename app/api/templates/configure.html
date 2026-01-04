@@ -76,13 +76,14 @@
 </div>
 
 <script>
-const isHttps = window.location.protocol === "https:";
-const mode = isHttps ? "external" : "internal";
+const path = window.location.pathname;
+const mode = path.startsWith("/external") ? "external" : "internal";
+const isExternal = mode === "external";
 
 const baseInput = document.getElementById("base");
 baseInput.value = window.location.origin;
 
-if (isHttps) {
+if (isExternal) {
     document.getElementById("token-block").style.display = "block";
 }
 
@@ -98,7 +99,7 @@ function install() {
 
     let manifestUrl = `${base}/${mode}/manifest.json`;
 
-    if (isHttps) {
+    if (isExternal) {
         const token = document.getElementById("token").value.trim();
         if (!token) {
             alert("Token is required for external access");
