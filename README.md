@@ -2,8 +2,8 @@
 
 Self-hosted Stremio addon that indexes a **remote movie and series library** and serves streams over:
 
-- **LAN / VPN (HTTP)**
-- **WAN / Internet (HTTPS)** with token-based protection for stream discovery and resolution
+- **Internal access (HTTP)** for trusted networks (LAN/VPN)
+- **External access (HTTPS)** with token-based protection for stream discovery and resolution over the internet
 
 Stremio includes a “Local Files” addon for playing files stored on a PC.  
 However, platforms like **Fire TV sticks, Android TV, and other embedded devices** have no local storage and no way to access local files.
@@ -69,7 +69,7 @@ Title (YEAR) [1080p].ext
 Examples:
 ```
 Night of the Living Dead (1968).mp4
-Night of the Living Dead (1968) [1080p].mp4.mp4
+Night of the Living Dead (1968) [1080p].mp4
 ```
 
 Rules:
@@ -121,8 +121,8 @@ MEDIA_BASE_URL_EXTERNAL=https://external.host.name:11443
 | `STREAM_TOKENS` | Yes | Comma-separated list of tokens used by external Stremio stream resolvers |
 | `ADMIN_SCAN_TOKEN` | Yes | Token required for admin scan and rebuild endpoints |
 | `TMDB_API_KEY` | Yes | Used for metadata lookups (IMDb ID, posters, genres) |
-| `MEDIA_BASE_URL_INTERNAL` | Yes | Base URL used for LAN/VPN streams |
-| `MEDIA_BASE_URL_EXTERNAL` | Yes | Base URL used for external HTTPS streams |
+| `MEDIA_BASE_URL_INTERNAL` | Yes | Base IP/URL used for Internal (LAN/VPN) streams |
+| `MEDIA_BASE_URL_EXTERNAL` | Yes | Base IP/URL used for external HTTPS streams over the internet|
 
 ### Tokens (single or multiple)
 
@@ -203,7 +203,7 @@ If you do not require external HTTPS access to your media, you may comment out o
 ./volumes/stremio-remote-files-proxy/Caddyfile
 ```
 
-This disables all external WAN access while keeping LAN/VPN access intact.
+This disables all external internet access while keeping internal (LAN/VPN) access intact.
 
 ### 4) Ports, DNS, firewall
 
@@ -227,8 +227,8 @@ docker compose up -d --build
 ### 6) Configure addon for Stremio
 
 Open in a browser:
-- Internal: http://<internal.ip.address>:11080/configure — Configure the addon over HTTP (LAN / VPN)
-- External: https://<external.host.name>:11443/configure — Configure the addon over HTTPS with token authentication
+- Internal: http://<internal.ip.address>:11080/configure — Configure the addon for internal HTTP (LAN/VPN)
+- External: https://<external.host.name>:11443/configure — Configure the addon for external HTTPS with token authentication
 
 A configuration web page will be displayed.  
 
@@ -246,8 +246,8 @@ Click **Install Addon**:
 - The manifest URL is displayed in case automatic installation fails
 
 In Stremio:
-- Discover → Movies → **Remote Files** → `Movie Name` → Remote Files (LAN) - Play
-- Discover → Series → **Remote Files** → `Series Name` → `Season` → `Episode` → Remote Files (LAN) - Play
+- Discover → Movies → **Remote Files** → `Movie Name` → Remote Files (Internal) - Play
+- Discover → Series → **Remote Files** → `Series Name` → `Season` → `Episode` → Remote Files (Internal) - Play
 
 ### Note on duplicate catalogs
 
@@ -308,18 +308,18 @@ print("Scan complete")
 PY
 ```
 
-### Manual rescan via HTTP / HTTPS (from host, LAN, or VPN)
+### Manual rescan via HTTP / HTTPS
 
 You can trigger a rescan using the admin endpoints directly from the host
 or any trusted LAN/VPN client.
 
-#### Internal (HTTP – LAN / VPN)
+#### Internal (HTTP – LAN/VPN)
 ```bash
 curl -X POST http://internal.ip.address:11080/admin/scan \
   -H "Authorization: Bearer ADMIN_SCAN_TOKEN"
 ```
 
-#### External (HTTPS)
+#### External (HTTPS - internet)
 ```bash
 curl -k -X POST https://external.host.name:11443/admin/scan \
   -H "Authorization: Bearer ADMIN_SCAN_TOKEN"
@@ -339,7 +339,7 @@ curl -k -X POST https://external.host.name:11443/admin/scan/rebuild \
 
 #### Notes
 
-- Intended for trusted LAN / VPN or secured HTTPS access
+- Intended for trusted internal (LAN/VPN) or secured HTTPS access over the internet
 - Requires a valid admin token
 - Uses the same code path as the Admin UI
 - Does not require Docker access
@@ -415,7 +415,7 @@ curl -I http://internal.ip.address:11080/movies/Night%20of%20the%20Living%20Dead
 
 Tests:
 ```bash
-curl -k -I http://internal.ip.address:11080/movies/Night%20of%20the%20Living%20Dead%20(1968).mp4
+curl -k -I http://external.ip.address:11443/movies/Night%20of%20the%20Living%20Dead%20(1968).mp4
 ```
 
 ---
@@ -444,7 +444,7 @@ curl -k -I http://internal.ip.address:11080/movies/Night%20of%20the%20Living%20D
 If an episode file (e.g. `S02E01`) is placed in the wrong season directory (e.g. `Season 03`):
 
 - The scanner trusts the folder structure
-- The `Remote Files (LAN) - Play` link will appear under the folder’s season and the file's episode
+- The `Remote Files (Internal) - Play` link will appear under the folder’s season and the file's episode
 - Playback still works, but metadata is incorrect
 
 Possible future approaches:
@@ -459,7 +459,7 @@ If only one episode of a series exists on disk:
 
 - The series still appears in catalogs
 - All seasons/episodes may be browsable
-- Only existing episodes are playable using `Remote Files (LAN) - Play` link
+- Only existing episodes are playable using `Remote Files (Internal) - Play` link
 
 Possible future improvements:
 - Hide empty seasons
@@ -546,7 +546,7 @@ If you **do need both internal and external access**, you can still eliminate
 duplicate catalogs by **removing catalog definitions from one manifest**.
 
 This preserves:
-- dual access (LAN + HTTPS)
+- dual access (internal + external)
 - correct stream resolution
 - token-based security
 
