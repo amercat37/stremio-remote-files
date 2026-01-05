@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from db.init import init_db
 from api.stremio import router as stremio_router
 from api.admin import router as admin_router
+from api.auth import router as auth_router
 from scanner import scan_movies, scan_series
 
 app = FastAPI()
@@ -39,3 +40,6 @@ app.include_router(stremio_router)
 
 # Admin and install endpoints
 app.include_router(admin_router)
+
+# Auth endpoints
+app.include_router(auth_router)
