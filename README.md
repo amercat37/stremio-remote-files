@@ -114,6 +114,9 @@ MEDIA_BASE_URL_EXTERNAL=https://external.host.name:11443
 TRUSTED_NETWORKS=192.168.0.0/16 10.0.0.0/8 172.16.0.0/12
 ```
 
+⚠️ MEDIA_BASE_URL_INTERNAL and MEDIA_BASE_URL_EXTERNAL must exactly match the scheme (http/https), host, and port exposed by the proxy.
+A mismatch will cause Stremio to hide streams or fail playback silently.
+
 ### Variable reference
 
 | Variable | Required | Description |
@@ -190,7 +193,7 @@ cp .env.sample .env
 
 ### 3) Add TLS certificates
 
-TLS certificates are required for internal and external access.
+A TLS certificate (required for HTTPS and all external access; optional for internal HTTP-only LAN setups)
 
 ```
 ./volumes/stremio-remote-files-proxy/certs/fullchain.pem
@@ -211,6 +214,25 @@ If you do expose this plugin externally:
 ```bash
 docker compose up -d --build
 ```
+
+### Optional: Internal HTTP access (no internal DNS required)
+
+In some environments (for example **Fire TV sticks**, ISP-managed DNS, or routers that do not allow custom DNS records), internal hostnames may not resolve, and HTTPS certificates tied to public hostnames may fail when accessing a private IP.
+
+To support these cases, the proxy **can optionally expose internal access over plain HTTP** for trusted networks:
+
+- When using internal HTTP access, token authentication is not enforced, as access is restricted by trusted network CIDRs.
+- External access **must still use HTTPS** and token protection
+- This allows devices to connect using a raw IP address (e.g. `http://192.168.1.48`)
+
+Example use cases:
+- Fire TV / Android TV devices without internal DNS
+- Routers that cannot define local DNS overrides
+- Simple LAN-only deployments
+
+This mode is **optional** and intended only for trusted LAN/VPN environments.  
+If you have working internal DNS and valid certificates, HTTPS-only internal access is still recommended.
+
 
 ### 6) Configure addon for Stremio
 
@@ -239,7 +261,7 @@ In Stremio:
 
 or
 
-Search for any movie or series and look at the list of streams on the right hand side.  Click the down addow next to "All" at the top of the streams list.  Choose "Remote Files (Internal)" or "Remote Files (External)".
+Search for any movie or series and look at the list of streams on the right hand side.  Click the down arrow next to "All" at the top of the streams list.  Choose "Remote Files (Internal)" or "Remote Files (External)".
 
 ### Note on duplicate catalogs
 
@@ -584,6 +606,7 @@ target-version = "py312"
 - Trusted internal networks bypass token checks
 - External media requests are authenticated via the FastAPI `/auth` endpoint
 - Stream discovery and resolution are still token-protected at the API layer
+- External stream and catalog endpoints return empty results (not errors) when tokens are invalid, matching Stremio addon expectations.
 
 This design follows the same security model used by common Stremio addons, which protect stream discovery and resolution rather than media byte delivery.
 
