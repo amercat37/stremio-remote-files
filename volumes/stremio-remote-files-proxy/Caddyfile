@@ -83,3 +83,25 @@
         }
     }
 }
+
+:80 {
+
+    # Only allow LAN / VPN clients
+    @internal remote_ip {$TRUSTED_NETWORKS}
+
+    handle @internal {
+        # FastAPI UI + addon endpoints
+        reverse_proxy /admin*      stremio-remote-files-api:7000
+        reverse_proxy /configure* stremio-remote-files-api:7000
+        reverse_proxy /internal*  stremio-remote-files-api:7000
+
+        # Media files – LAN only, no tokens
+        root * /media
+        file_server
+    }
+
+    # Anything else gets blocked
+    handle {
+        respond 403
+    }
+}

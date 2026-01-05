@@ -15,6 +15,7 @@ services:
 
     ports:
       - "11443:443"
+      - "11080:80"
 
     volumes:
       # Shared media storage (read-only)
