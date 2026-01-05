@@ -109,7 +109,7 @@ Create `.env` from `.env.sample`.
 STREAM_TOKENS=change-me
 ADMIN_SCAN_TOKEN=change-me
 TMDB_API_KEY=change-me
-MEDIA_BASE_URL_INTERNAL=https://internal.ip.address:11443
+MEDIA_BASE_URL_INTERNAL=https://internal.host.name:11443
 MEDIA_BASE_URL_EXTERNAL=https://external.host.name:11443
 TRUSTED_NETWORKS=192.168.0.0/16 10.0.0.0/8 172.16.0.0/12
 ```
@@ -237,7 +237,7 @@ If you have working internal DNS and valid certificates, HTTPS-only internal acc
 ### 6) Configure addon for Stremio
 
 Open in a browser:
-- Internal: https://<internal.ip.address>:11443/internal/configure — Configure the addon for internal (LAN/VPN) access
+- Internal: https://<internal.host.name>:11443/internal/configure — Configure the addon for internal (LAN/VPN) access
 - External: https://<external.host.name>:11443/external/configure — Configure the addon for external access with token authentication
 
 A configuration web page will be displayed.  
@@ -291,7 +291,7 @@ On API startup:
 ### Manual scan (Admin UI)
 
 Admin page:
-- `https://<internal.ip.address>:11443/admin`
+- `https://<internal.host.name>:11443/admin`
 - `https://<external.host.name>:11443/admin`
 
 Admin actions (token required):
@@ -329,7 +329,7 @@ or any trusted LAN/VPN client.
 
 #### Internal
 ```bash
-curl -X POST https://internal.ip.address:11443/admin/scan \
+curl -X POST https://internal.host.name:11443/admin/scan \
   -H "Authorization: Bearer ADMIN_SCAN_TOKEN"
 ```
 
@@ -341,7 +341,7 @@ curl -k -X POST https://external.host.name:11443/admin/scan \
 
 #### Full rebuild (Internal)
 ```bash
-curl -X POST https://internal.ip.address:11443/admin/scan/rebuild \
+curl -X POST https://internal.host.name:11443/admin/scan/rebuild \
   -H "Authorization: Bearer ADMIN_SCAN_TOKEN"
 ```
 
@@ -417,7 +417,7 @@ Unauthorized external stream requests return an **empty stream list**, matching 
 
 Test:
 ```bash
-curl -I https://internal.ip.address:11443/movies/Night%20of%20the%20Living%20Dead%20(1968).mp4
+curl -I https://internal.host.name:11443/movies/Night%20of%20the%20Living%20Dead%20(1968).mp4
 ```
 
 ### External
