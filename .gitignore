@@ -26,6 +26,9 @@ env/
 # ------------------------------------------------------------
 volumes/**
 
+# Re-include directories so Git can descend
+!volumes/**/
+
 # Re-include .gitkeep files to preserve structure
 !volumes/**/.gitkeep
 
