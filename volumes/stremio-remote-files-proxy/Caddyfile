@@ -1,0 +1,61 @@
+# ============================================================
+# Stremio Remote Files – Reverse Proxy
+#
+# Design notes:
+# - :80 is intended for LAN / VPN use (trusted network)
+# - :443 is intended for external access (HTTPS)
+# - API/UI endpoints are always proxied to the FastAPI service
+# - Media is served directly by Caddy
+# ============================================================
+
+
+{
+    log {
+        output stdout
+        format console
+        level DEBUG
+    }
+}
+
+
+# ============================================================
+# Internal (LAN / VPN)
+# ============================================================
+:80 {
+
+  route {
+    # FastAPI UI + API endpoints
+    # Internal access does NOT require tokens
+    reverse_proxy /admin*    stremio-remote-files-api:7000
+    reverse_proxy /configure*  stremio-remote-files-api:7000
+    reverse_proxy /internal* stremio-remote-files-api:7000
+    reverse_proxy /external* stremio-remote-files-api:7000
+
+    # Media files (trusted network, no token required)
+    root * /media
+    file_server
+  }
+}
+
+
+# ============================================================
+# External (HTTPS)
+# ============================================================
+:443 {
+  # Static certificates mounted from volume
+  tls /certs/fullchain.pem /certs/privkey.pem
+
+  route {
+    # FastAPI UI + API endpoints
+    # Authentication is enforced by the application itself
+    reverse_proxy /admin*    stremio-remote-files-api:7000
+    reverse_proxy /configure*  stremio-remote-files-api:7000
+    reverse_proxy /internal* stremio-remote-files-api:7000
+    reverse_proxy /external* stremio-remote-files-api:7000
+  }
+
+  route {
+    root * /media
+    file_server
+  }
+}

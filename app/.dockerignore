@@ -1,0 +1,23 @@
+# Git / metadata
+.git
+.gitignore
+
+# Environment
+.env
+.env.sample
+
+# Runtime volumes and media
+volumes/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/

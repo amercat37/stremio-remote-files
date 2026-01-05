@@ -1,0 +1,45 @@
+version: "3.8"
+
+services:
+  # ------------------------------------------------------------
+  # Reverse proxy + static media server (Caddy)
+  # ------------------------------------------------------------
+  stremio-remote-files-proxy:
+    image: caddy:2
+    container_name: stremio-remote-files-proxy
+    restart: unless-stopped
+
+    ports:
+      - "11080:80"     # HTTP (internal LAN / VPN)
+      - "11443:443"    # HTTPS (external)
+
+    volumes:
+      # Shared media storage (read-only)
+      - ./volumes/stremio-remote-files-shared/media:/media:ro
+
+      # Caddy configuration and TLS assets
+      - ./volumes/stremio-remote-files-proxy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./volumes/stremio-remote-files-proxy/certs:/certs:ro
+
+
+  # ------------------------------------------------------------
+  # Stremio Remote Files API / Addon (FastAPI)
+  # ------------------------------------------------------------
+  stremio-remote-files-api:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+
+    container_name: stremio-remote-files-api
+    restart: unless-stopped
+
+    # Runtime configuration (not committed; see .env.sample)
+    env_file:
+      - .env
+
+    volumes:
+      # SQLite database storage
+      - ./volumes/stremio-remote-files-api/data:/data
+
+      # Shared media storage (read-only)
+      - ./volumes/stremio-remote-files-shared/media:/media:ro

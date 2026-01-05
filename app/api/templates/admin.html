@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Remote Files – Admin</title>
+    <meta charset="utf-8">
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f5f7fa;
+            margin: 0;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        h1 {
+            margin-top: 0;
+        }
+
+        label {
+            font-weight: 600;
+        }
+
+        input[type="password"] {
+            width: 100%;
+            padding: 8px;
+            margin-top: 6px;
+            margin-bottom: 16px;
+            box-sizing: border-box;
+        }
+
+        button {
+            padding: 8px 14px;
+            margin-right: 10px;
+            font-weight: 600;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+        }
+
+        button.primary {
+            background: #2563eb;
+            color: white;
+        }
+
+        button.danger {
+            background: #dc2626;
+            color: white;
+        }
+
+        pre {
+            background: #f1f5f9;
+            color: #0f172a;
+            padding: 12px;
+            border-radius: 4px;
+            margin-top: 20px;
+            min-height: 60px;
+            overflow-x: auto;
+            border: 1px solid #e2e8f0;
+        }
+
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Remote Files Admin</h1>
+
+    <label>Admin Scan Token</label>
+    <input id="token" type="password" placeholder="Bearer token" />
+
+    <button type="button" class="primary" onclick="scan()">Scan Library</button>
+    <button type="button" class="danger" onclick="rebuild()">Full Rebuild</button>
+
+    <pre id="output"></pre>
+</div>
+
+<script>
+async function scan() {
+    await call("/admin/scan");
+}
+
+async function rebuild() {
+    if (!confirm("This will clear the database. Continue?")) return;
+    await call("/admin/scan/rebuild");
+}
+
+async function call(path) {
+    const token = document.getElementById("token").value;
+    const res = await fetch(path, {
+        method: "POST",
+        headers: {
+            "Authorization": "Bearer " + token
+        }
+    });
+    const text = await res.text();
+    document.getElementById("output").textContent = text;
+}
+</script>
+</body>
+</html>
