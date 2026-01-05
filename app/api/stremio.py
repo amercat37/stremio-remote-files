@@ -13,6 +13,8 @@ Security model:
 """
 
 from fastapi import APIRouter, Request
+from urllib.parse import quote
+from pathlib import Path
 import sqlite3
 
 from db.catalog import get_movie_catalog, get_series_catalog
@@ -63,7 +65,7 @@ def stream_movie(imdb_id: str, request: Request):
     with sqlite3.connect(DB_PATH) as conn:
         rows = conn.execute(
             """
-            SELECT path, resolution
+            SELECT path, resolution, size
             FROM files
             WHERE movie_imdb_id = ?
             """,
@@ -71,15 +73,22 @@ def stream_movie(imdb_id: str, request: Request):
         ).fetchall()
 
     streams = []
-    for (path, resolution) in rows:
-        url = f"{base_url}{path.replace('/media', '')}"
-        title = "Play"
-        if resolution:
-            title = f"Play ({resolution})"
+
+    for path, resolution, size in rows:
+        # percent-encode each path segment
+        safe_path = "/".join(quote(p) for p in path.split("/"))
+        url = f"{base_url}{safe_path.replace('/media', '')}"
+
+        res = resolution or ""
+
+        filename = Path(path).name
+        size_gb = round(size / (1024 ** 3), 1)
+
+        title = f"{filename}\n💾 {size_gb} GB"
 
         streams.append(
             {
-                "name": provider_name,
+                "name": f"{provider_name} {res}".strip(),
                 "title": title,
                 "url": url,
                 "availability": "local",
@@ -120,7 +129,7 @@ def stream_episode(episode_id: str, request: Request):
     with sqlite3.connect(DB_PATH) as conn:
         rows = conn.execute(
             """
-            SELECT f.path, f.resolution
+            SELECT f.path, f.resolution, f.size
             FROM episodes e
             JOIN files f ON f.episode_id = e.id
             WHERE e.series_imdb_id = ?
@@ -131,15 +140,22 @@ def stream_episode(episode_id: str, request: Request):
         ).fetchall()
 
     streams = []
-    for (path, resolution) in rows:
-        url = f"{base_url}{path.replace('/media', '')}"
-        title = "Play"
-        if resolution:
-            title = f"Play ({resolution})"
+
+    for path, resolution, size in rows:
+        # percent-encode each path segment
+        safe_path = "/".join(quote(p) for p in path.split("/"))
+        url = f"{base_url}{safe_path.replace('/media', '')}"
+
+        res = resolution or ""
+
+        filename = Path(path).name
+        size_gb = round(size / (1024 ** 3), 1)
+
+        title = f"{filename}\n💾 {size_gb} GB"
 
         streams.append(
             {
-                "name": provider_name,
+                "name": f"{provider_name} {res}".strip(),
                 "title": title,
                 "url": url,
                 "behaviorHints": {
