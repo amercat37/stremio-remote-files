@@ -29,6 +29,44 @@ router = APIRouter()
 
 
 # ------------------------------------------------------------
+# Helper: build a Stremio stream entry
+# Shared by movie + episode streams
+# ------------------------------------------------------------
+
+def build_stream(
+    *,
+    path: str,
+    resolution: str | None,
+    size: int,
+    base_url: str,
+    provider_name: str,
+    behavior_hints: dict,
+):
+    # Percent-encode each path segment
+    safe_path = "/".join(quote(p) for p in path.split("/"))
+    url = f"{base_url}{safe_path.replace('/media', '')}"
+
+    filename = Path(path).name
+    res = resolution or ""
+
+    # Size formatting (MB < 1GB, otherwise GB)
+    if size < 1024 ** 3:
+        size_str = f"{round(size / (1024 ** 2))} MB"
+    else:
+        size_str = f"{round(size / (1024 ** 3), 1)} GB"
+
+    title = f"{filename}\n💾 {size_str}"
+
+    return {
+        "name": f"{provider_name} {res}".strip(),
+        "title": title,
+        "url": url,
+        "availability": "local",
+        "behaviorHints": behavior_hints,
+    }
+
+
+# ------------------------------------------------------------
 # CATALOGS
 # ------------------------------------------------------------
 
@@ -88,28 +126,18 @@ def stream_movie(imdb_id: str, request: Request):
     streams = []
 
     for path, resolution, size in rows:
-        # percent-encode each path segment
-        safe_path = "/".join(quote(p) for p in path.split("/"))
-        url = f"{base_url}{safe_path.replace('/media', '')}"
-
-        res = resolution or ""
-
-        filename = Path(path).name
-        size_gb = round(size / (1024 ** 3), 1)
-
-        title = f"{filename}\n💾 {size_gb} GB"
-
         streams.append(
-            {
-                "name": f"{provider_name} {res}".strip(),
-                "title": title,
-                "url": url,
-                "availability": "local",
-                "behaviorHints": {
+            build_stream(
+                path=path,
+                resolution=resolution,
+                size=size,
+                base_url=base_url,
+                provider_name=provider_name,
+                behavior_hints={
                     "notWebReady": False,
                     "confidence": 1,
                 },
-            }
+            )
         )
 
     return {"streams": streams}
@@ -155,27 +183,19 @@ def stream_episode(episode_id: str, request: Request):
     streams = []
 
     for path, resolution, size in rows:
-        # percent-encode each path segment
-        safe_path = "/".join(quote(p) for p in path.split("/"))
-        url = f"{base_url}{safe_path.replace('/media', '')}"
-
-        res = resolution or ""
-
-        filename = Path(path).name
-        size_gb = round(size / (1024 ** 3), 1)
-
-        title = f"{filename}\n💾 {size_gb} GB"
-
         streams.append(
-            {
-                "name": f"{provider_name} {res}".strip(),
-                "title": title,
-                "url": url,
-                "behaviorHints": {
+            build_stream(
+                path=path,
+                resolution=resolution,
+                size=size,
+                base_url=base_url,
+                provider_name=provider_name,
+                behavior_hints={
                     "notWebReady": False,
+                    "confidence": 1,
                     "bingeGroup": series_imdb_id,
                 },
-            }
+            )
         )
 
     return {"streams": streams}
