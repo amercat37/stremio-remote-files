@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented here.
 
+## [1.3.0] - 2026-01-06
+
+### Added
+- Support for custom stream provider display names via environment variables:
+  - `STREAM_PROVIDER_NAME_INTERNAL`
+  - `STREAM_PROVIDER_NAME_EXTERNAL`
+
+### Changed
+- Improved file size display in stream titles:
+  - Files under 1 GB now display in MB
+  - Files 1 GB and larger display in GB
+- Refactored stream construction logic to use a shared helper for movies and series (no behavior change)
+
+### Notes
+- No breaking changes
+- Existing configurations continue to work without modification
+
 ## 1.2.0
 - Default prevention of duplicate catalogs when using internal + external access
 - Clarified and enforced token-based security model

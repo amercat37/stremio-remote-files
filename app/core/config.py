@@ -21,6 +21,17 @@ if not MEDIA_BASE_URL_INTERNAL or not MEDIA_BASE_URL_EXTERNAL:
         "MEDIA_BASE_URL_INTERNAL and MEDIA_BASE_URL_EXTERNAL must be set"
     )
 
+# Stream provider display names shown in Stremio
+STREAM_PROVIDER_NAME_INTERNAL = os.getenv(
+    "STREAM_PROVIDER_NAME_INTERNAL",
+    "Remote Files (Internal)",
+)
+
+STREAM_PROVIDER_NAME_EXTERNAL = os.getenv(
+    "STREAM_PROVIDER_NAME_EXTERNAL",
+    "Remote Files (External)",
+)
+
 # Stream resolver tokens (external playback)
 RAW_STREAM_TOKENS = os.getenv("STREAM_TOKENS", "")
 STREAM_TOKENS = {t.strip() for t in RAW_STREAM_TOKENS.split(",") if t.strip()}
