@@ -47,3 +47,21 @@ services:
 
       # Shared media storage (read-only)
       - ./volumes/stremio-remote-files-shared/media:/media:ro
+
+
+  # ------------------------------------------------------------
+  # Auto-scan sidecar (cron-based)
+  # ------------------------------------------------------------
+  stremio-remote-files-scanner:
+    build:
+      context: ./scanner
+      dockerfile: Dockerfile
+
+    container_name: stremio-remote-files-scanner
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    depends_on:
+      - stremio-remote-files-api

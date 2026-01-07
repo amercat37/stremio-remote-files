@@ -14,6 +14,10 @@ All notable changes to this project will be documented here.
   - Files under 1 GB now display in MB
   - Files 1 GB and larger display in GB
 - Refactored stream construction logic to use a shared helper for movies and series (no behavior change)
+- Automatic library refresh via scheduled background scans:
+  - New cron-based scan sidecar container
+  - Configurable scan schedule using `SCAN_CRON`
+  - Uses existing admin scan endpoint and `ADMIN_SCAN_TOKEN`
 
 ### Notes
 - No breaking changes
