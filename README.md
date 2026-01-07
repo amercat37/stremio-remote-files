@@ -31,7 +31,7 @@ No Python installation is required on the host system.
 
 ## Architecture
 
-There are **two services**:
+There are **three services**:
 
 ### 1) `stremio-remote-files-api` (FastAPI)
 
@@ -52,6 +52,14 @@ There are **two services**:
 - Enforces token validation for **external media requests** at the proxy layer
 - Trusted internal networks (LAN/VPN) bypass token checks
 - Token validation is delegated to the FastAPI `/auth` endpoint
+
+### 3) `stremio-remote-files-scanner` (Sidecar)
+
+- Lightweight cron-based sidecar container
+- Periodically triggers library scans via the admin scan endpoint
+- Uses the same `ADMIN_SCAN_TOKEN` as manual admin actions
+- Schedule is fully configurable via environment variable
+- No direct access to media or database volumes
 
 ---
 
@@ -114,6 +122,7 @@ MEDIA_BASE_URL_EXTERNAL=https://external.host.name:11443
 TRUSTED_NETWORKS=192.168.0.0/16 10.0.0.0/8 172.16.0.0/12
 STREAM_PROVIDER_NAME_INTERNAL=Remote Files (Internal)
 STREAM_PROVIDER_NAME_EXTERNAL=Remote Files (External)
+SCAN_CRON=0 * * * *
 ```
 
 ⚠️ MEDIA_BASE_URL_INTERNAL and MEDIA_BASE_URL_EXTERNAL must exactly match the scheme (http/https), host, and port exposed by the proxy.
@@ -131,6 +140,7 @@ A mismatch will cause Stremio to hide streams or fail playback silently.
 | `TRUSTED_NETWORKS` | Yes | **Space-separated** CIDR ranges treated as trusted internal networks (LAN/VPN)|
 | `STREAM_PROVIDER_NAME_INTERNAL` | No | Display name shown in Stremio for internal (LAN/VPN) streams |
 | `STREAM_PROVIDER_NAME_EXTERNAL` | No | Display name shown in Stremio for external streams |
+| `SCAN_CRON` | Yes | Cron expression controlling automatic library scans |
 
 ### Tokens
 
@@ -284,6 +294,15 @@ See:
 ---
 
 ## Scanning media
+
+### Scheduled automatic scans (sidecar)
+
+A background sidecar container periodically triggers
+`POST /admin/scan` using the configured cron schedule.
+
+- Controlled by `SCAN_CRON`
+- Uses the same admin token and scan logic as manual scans
+- Runs independently of the API container
 
 ### Automatic scan
 
