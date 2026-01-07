@@ -18,6 +18,10 @@ All notable changes to this project will be documented here.
   - New cron-based scan sidecar container
   - Configurable scan schedule using `SCAN_CRON`
   - Uses existing admin scan endpoint and `ADMIN_SCAN_TOKEN`
+- Support for configurable media folder names:
+  - Movie and series subfolder names under `/media` can now be customized
+  - Controlled via `MOVIES_DIR_NAME` and `SERIES_DIR_NAME`
+  - Defaults remain `movies` and `series` for backward compatibility
 
 ### Notes
 - No breaking changes

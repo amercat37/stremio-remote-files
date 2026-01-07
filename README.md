@@ -65,7 +65,7 @@ There are **three services**:
 
 ## Media naming
 
-### Movies (`/media/movies`)
+### Movies (`/media/<movies-folder>`)
 
 Filename format:
 ```
@@ -86,7 +86,7 @@ Rules:
 
 ---
 
-### Series (`/media/series`)
+### Series (`/media/<series-folder>`)
 
 Folder / filename format:
 ```
@@ -107,6 +107,26 @@ Rules:
 - Episode files must start with `SxxExx`
 - Episode title and resolution tag are optional
 
+### Configurable media folders
+
+By default, this addon expects the following structure under `/media`:
+
+- `/media/movies`
+- `/media/series`
+
+These folder names can be customized to match existing libraries
+(such as Plex layouts) using environment variables:
+
+- `MOVIES_DIR_NAME`
+- `SERIES_DIR_NAME`
+
+Examples:
+- `Movies` / `TV Shows`
+- `Films` / `Series`
+
+Only the **folder names change** — the mount point (`/media`) and
+all naming rules inside those folders remain the same.
+
 ---
 
 ## Environment file setup (`.env`)
@@ -123,6 +143,8 @@ TRUSTED_NETWORKS=192.168.0.0/16 10.0.0.0/8 172.16.0.0/12
 STREAM_PROVIDER_NAME_INTERNAL=Remote Files (Internal)
 STREAM_PROVIDER_NAME_EXTERNAL=Remote Files (External)
 SCAN_CRON=0 * * * *
+MOVIES_DIR_NAME=movies
+SERIES_DIR_NAME=series
 ```
 
 ⚠️ MEDIA_BASE_URL_INTERNAL and MEDIA_BASE_URL_EXTERNAL must exactly match the scheme (http/https), host, and port exposed by the proxy.
@@ -138,9 +160,11 @@ A mismatch will cause Stremio to hide streams or fail playback silently.
 | `MEDIA_BASE_URL_INTERNAL` | Yes | Base IP/URL used for Internal (LAN/VPN) streams |
 | `MEDIA_BASE_URL_EXTERNAL` | Yes | Base IP/URL used for external streams over the internet (enforces token protection)|
 | `TRUSTED_NETWORKS` | Yes | **Space-separated** CIDR ranges treated as trusted internal networks (LAN/VPN)|
-| `STREAM_PROVIDER_NAME_INTERNAL` | No | Display name shown in Stremio for internal (LAN/VPN) streams |
-| `STREAM_PROVIDER_NAME_EXTERNAL` | No | Display name shown in Stremio for external streams |
+| `STREAM_PROVIDER_NAME_INTERNAL` | No | Display name shown in Stremio for internal (LAN/VPN) streams (default: `Remote Files (Internal)`) |
+| `STREAM_PROVIDER_NAME_EXTERNAL` | No | Display name shown in Stremio for external streams (default: `Remote Files (External)`) |
 | `SCAN_CRON` | Yes | Cron expression controlling automatic library scans |
+| `MOVIES_DIR_NAME` | No | Subfolder name under `/media` containing movie files (default: `movies`) |
+| `SERIES_DIR_NAME` | No | Subfolder name under `/media` containing series files (default: `series`) |
 
 ### Tokens
 

@@ -9,11 +9,12 @@ from pathlib import Path
 import re
 import sqlite3
 
+from core.config import MOVIES_DIR_NAME
 from metadata.tmdb import lookup_movie
 from db.movie_repo import upsert_movie, upsert_movie_file
 
 # Root directory for movie files (mounted volume)
-MOVIES_ROOT = Path("/media/movies")
+MOVIES_ROOT = Path("/media") / MOVIES_DIR_NAME
 
 # SQLite database location
 DB_PATH = "/data/library.db"
