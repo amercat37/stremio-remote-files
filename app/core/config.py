@@ -38,3 +38,7 @@ STREAM_TOKENS = {t.strip() for t in RAW_STREAM_TOKENS.split(",") if t.strip()}
 
 # Admin scan token (admin actions only)
 ADMIN_SCAN_TOKEN = os.getenv("ADMIN_SCAN_TOKEN")
+
+# Media subfolder names under /media
+MOVIES_DIR_NAME = os.getenv("MOVIES_DIR_NAME", "movies")
+SERIES_DIR_NAME = os.getenv("SERIES_DIR_NAME", "series")

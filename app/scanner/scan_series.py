@@ -9,11 +9,12 @@ from pathlib import Path
 import re
 import sqlite3
 
+from core.config import SERIES_DIR_NAME
 from metadata.tmdb import lookup_series
 from db.series_repo import upsert_series, upsert_episode, upsert_episode_file
 
 # Root directory for series files (mounted volume)
-SERIES_ROOT = Path("/media/series")
+SERIES_ROOT = Path("/media") / SERIES_DIR_NAME
 
 # SQLite database location
 DB_PATH = "/data/library.db"
