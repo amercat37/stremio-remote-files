@@ -92,20 +92,23 @@ Folder / filename format:
 ```
 Series Name/
   Season 01/
-    S01E01 - Episode Title.ext
-    S01E02 - Episode Title [1080p].ext
+    S01E01.ext
+    S01E02 - Episode Title.ext
+    Show.Name.S01E03.1080p.WEB-DL.mkv
 ```
 
 Examples:
 ```
 Flash Gordon/Season 01/S01E01 - The Planet of Peril.mp4
-Flash Gordon/Season 02/S02E03 - A Lesson in Courage [1080p].mp4
+Flash Gordon/Season 02/Flash.Gordon.S02E03.1080p.WEB-DL.mkv
+Flash Gordon/Season 02/[Group] Flash Gordon S02E04 [480p].mp4
 ```
 
 Rules:
 - Season folders must be named `Season <number>`
-- Episode files must start with `SxxExx`
-- Episode title and resolution tag are optional
+- Episode files are detected by the presence of `SxEx` anywhere in the filename
+- Episode titles are optional
+- Resolution tags are optional and may appear anywhere in the filename
 
 ### Configurable media folders
 

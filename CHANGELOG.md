@@ -22,6 +22,7 @@ All notable changes to this project will be documented here.
   - Movie and series subfolder names under `/media` can now be customized
   - Controlled via `MOVIES_DIR_NAME` and `SERIES_DIR_NAME`
   - Defaults remain `movies` and `series` for backward compatibility
+- Improved TV episode filename detection to support real-world naming formats
 
 ### Notes
 - No breaking changes
