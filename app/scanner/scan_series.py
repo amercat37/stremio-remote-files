@@ -13,29 +13,77 @@ from core.config import SERIES_DIR_NAME
 from metadata.tmdb import lookup_series
 from db.series_repo import upsert_series, upsert_episode, upsert_episode_file
 
+
+# ---------------------------------------------------------------------------
+# Paths / config
+# ---------------------------------------------------------------------------
+
 # Root directory for series files (mounted volume)
 SERIES_ROOT = Path("/media") / SERIES_DIR_NAME
 
 # SQLite database location
 DB_PATH = "/data/library.db"
 
+
+# ---------------------------------------------------------------------------
+# Regex patterns
+# ---------------------------------------------------------------------------
+
 # Expected season folder format:
 #   Season 01
 SEASON_PATTERN = re.compile(r"Season\s+(?P<season>\d+)", re.IGNORECASE)
 
-# Expected episode filename format:
-#   S01E02 - Episode Title [1080p].ext
-EPISODE_PATTERN = re.compile(
+# Episode identity: find SxEx anywhere in filename
+EPISODE_SE_PATTERN = re.compile(
     r"""
-    ^S(?P<season>\d{2})           # Season number
-    E(?P<episode>\d{2})           # Episode number
-    (?:\s*-\s*.+?)?               # Optional episode title
-    (?:\s*\[(?P<res>\d+p)\])?     # Optional [1080p]
-    \.\w+$                        # File extension
+    S(?P<season>\d{1,2})
+    E(?P<episode>\d{1,2})
     """,
     re.IGNORECASE | re.VERBOSE,
 )
 
+# Resolution tokens (optional metadata, anywhere in filename)
+RESOLUTION_PATTERN = re.compile(
+    r"""
+    (?P<res>
+        240p | 360p | 480p | 576p | 720p | 900p |
+        1080p | 1440p | 2160p | 4320p |
+        480i | 576i | 1080i |
+        2K | 4K | 8K
+    )
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def parse_episode_filename(filename: str):
+    """
+    Extract season, episode, and optional resolution from an episode filename.
+
+    Returns:
+        (season_from_file: int, episode: int, resolution: str | None)
+        or None if no SxEx pattern is found.
+    """
+    se_match = EPISODE_SE_PATTERN.search(filename)
+    if not se_match:
+        return None
+
+    season_from_file = int(se_match.group("season"))
+    episode = int(se_match.group("episode"))
+
+    res_match = RESOLUTION_PATTERN.search(filename)
+    resolution = res_match.group("res") if res_match else None
+
+    return season_from_file, episode, resolution
+
+
+# ---------------------------------------------------------------------------
+# Scanner
+# ---------------------------------------------------------------------------
 
 def scan_series():
     """
@@ -85,19 +133,24 @@ def scan_series():
                     if not ep_file.is_file():
                         continue
 
-                    # STRICT match: whole filename must conform
-                    ep_match = EPISODE_PATTERN.match(ep_file.name)
-                    if not ep_match:
+                    parsed = parse_episode_filename(ep_file.name)
+                    if not parsed:
                         print(f"[SKIP] Episode file: {ep_file.name}")
                         continue
 
-                    episode_num = int(ep_match.group("episode"))
-                    resolution = ep_match.group("res")  # may be None
+                    season_from_file, episode_num, resolution = parsed
+
+                    # Optional sanity check (non-fatal)
+                    if season_from_file != season_num:
+                        print(
+                            f"[WARN] Season mismatch: folder={season_num}, "
+                            f"filename={season_from_file} ({ep_file.name})"
+                        )
 
                     # Track file as seen for cleanup
                     seen_paths.add(str(ep_file))
 
-                    # 2) Upsert episode
+                    # 2) Upsert episode (folder season is authoritative)
                     episode_id = upsert_episode(
                         conn,
                         series_imdb_id,
